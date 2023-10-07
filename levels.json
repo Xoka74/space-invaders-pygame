@@ -1,0 +1,43 @@
+{
+  "1": {
+    "player": {
+      "heats": 5,
+      "vel": 0.4
+    },
+    "invaders": {
+      "vel": 0.4
+    },
+    "mystery_ship": {
+    },
+    "high_score": {
+      "date": "2023-09-30 00:06:43.922509",
+      "score": 13
+    }
+  },
+  "2": {
+    "player": {
+      "heats": 5,
+      "vel": 0.4
+    },
+    "invaders": {
+      "vel": 0.4
+    },
+    "mystery_ship": {
+    },
+    "high_score": {
+    }
+  },
+  "3": {
+    "player": {
+      "heats": 5,
+      "vel": 0.4
+    },
+    "invaders": {
+      "vel": 0.4
+    },
+    "mystery_ship": {
+    },
+    "high_score": {
+    }
+  }
+}
