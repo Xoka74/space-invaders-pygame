@@ -1,13 +1,12 @@
-import copy
 import random
 import sys
 
 import pygame
-from pygame import Vector2, mixer
+from pygame import Vector2
 
 import config
 from controls import Button
-from game_objects import Invader, Player, Bullet, Level, OtherBunker
+from game_objects import Invader, Player, Bullet, Level
 from levels import levels
 from repositories import sounds, images
 
@@ -15,6 +14,7 @@ pygame.init()
 
 screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
 pygame.display.set_caption(config.GAME_TITLE)
+local_levels = levels()
 
 
 def quit_game():
@@ -23,18 +23,16 @@ def quit_game():
 
 
 def render(game_object):
-    screen.blit(game_object.sprite, game_object.pos)
+    screen.blit(game_object.image, game_object.rect)
 
 
 def main_menu():
     play_button = Button('PLAY', pos=(config.SCREEN_WIDTH / 2, 100),
                          fontsize=36,
-                         colors='white on black',
-                         hover_colors="white on black", )
+                         colors='white on black', )
     quit_button = Button('QUIT', pos=(config.SCREEN_WIDTH / 2, 200),
                          fontsize=36,
-                         colors='white on black',
-                         hover_colors="white on black", )
+                         colors='white on black', )
 
     buttons = pygame.sprite.Group()
     buttons.add(play_button, quit_button)
@@ -58,18 +56,16 @@ def levels_menu():
     buttons = pygame.sprite.Group()
     back_button = Button('BACK', pos=(40, 40),
                          fontsize=36,
-                         colors='white on black',
-                         hover_colors='white on black')
+                         colors='white on black', )
 
     buttons.add(back_button)
-    local_levels = levels()
 
     for i in range(len(local_levels)):
         level = local_levels[i]
-        button = Button(f'Level {level.name}', pos=(config.SCREEN_WIDTH / 2, 50 + i * 100),
+        button = Button(f'Level {level.name} | High score: {level.high_score}',
+                        pos=(config.SCREEN_WIDTH / 2, 50 + i * 100),
                         fontsize=36,
-                        colors='white on black',
-                        hover_colors="white on black", )
+                        colors='white on black', )
 
         buttons.add(button)
 
@@ -77,8 +73,7 @@ def levels_menu():
         screen.fill('black')
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+                quit_game()
 
         if back_button.clicked():
             return
@@ -86,8 +81,16 @@ def levels_menu():
         buttons_list = list(buttons)
 
         for i in range(1, len(buttons_list)):
-            if buttons_list[i].clicked():
-                play_level(levels()[i - 1])
+            button = buttons_list[i]
+            if button.clicked():
+                level = levels()[i - 1]
+                base_level = local_levels[i - 1]
+                score_val = play_level(level)
+                if base_level.high_score >= score_val:
+                    continue
+
+                base_level.high_score = score_val
+                button.set_text(f'Level {base_level.name} | High score: {base_level.high_score}')
 
         buttons.draw(screen)
         buttons.update()
@@ -95,7 +98,7 @@ def levels_menu():
 
 
 def play_level(level: Level):
-    TRIGGER_MYSTERY_SHIP, t = pygame.USEREVENT + 1, 1000
+    TRIGGER_MYSTERY_SHIP, t = pygame.USEREVENT + 1, 10000
     bullet_image = images.get('bullet')
     pygame.time.set_timer(TRIGGER_MYSTERY_SHIP, t)
     font = pygame.font.Font('freesansbold.ttf', 20)
@@ -103,13 +106,6 @@ def play_level(level: Level):
     bullet_sound = sounds.get('bullet')
     explosion_sound = sounds.get('explosion')
     background_sound = sounds.get('background')
-    bunkers = pygame.sprite.Group()
-    bunker = OtherBunker(images.get('bunker_default'), Vector2(0, 0), Vector2(0, 0))
-
-
-    for b in [bunker]:
-        bunkers.add(b)
-
 
     while True:
 
@@ -127,54 +123,36 @@ def play_level(level: Level):
 
                 if event.key == pygame.K_SPACE:
                     if not level.player.reloading:
-                        bullet = Bullet(sprite=bullet_image, pos=Vector2(0, 0), vel=Vector2(0, -0.4),
-                                        shooter=level.player)
-                        level.bullets.append(bullet)
+                        bullet = Bullet(pos=Vector2(0, 0), vel=Vector2(0, -0.4), shooter=level.player)
+                        level.bullets.add(bullet)
                         bullet_sound.play()
                         level.player.reload()
-            if event.type == TRIGGER_MYSTERY_SHIP and not level.mystery_ship:
-                level.start_mystery_ship()
+
+            if event.type == TRIGGER_MYSTERY_SHIP and not level.mystery_ship.started:
+                level.mystery_ship.start()
 
             if event.type == pygame.KEYUP:
                 level.player.vel.x = 0
 
-        if level.mystery_ship:
+        if level.mystery_ship.started:
             level.mystery_ship.update()
             render(level.mystery_ship)
-            if not level.mystery_ship.started:
-                level.end_mystery_ship()
 
-        # bunkers
-        for bullet in level.bullets:
-            render(bullet)
-            bullet.update()
-        # for bunker in level.bunkers:
-        #     bunker.kill()
+        level.bullets.update()
+        level.bullets.draw(screen)
 
-        bunkers.update()
-        bunkers.draw(screen)
-        for b in bunkers:
-            print(b.groups())
-
-        # b.pos = level.bunkers[0].pos
-
-        # for bunker in level.bunkers:
-        #     bunker.update()
-
-        # for bunker in level.bunkers:
-        #     screen.set_at((int(bunker.pos.x), int(bunker.pos.y)), 255)
-        #     render(bunker)
-        #     bunker.update()
+        level.bunkers.update()
+        level.bunkers.draw(screen)
 
         if not list(level.invaders):
-            pass
+            return level.score_val
 
         for invader in level.invaders:
             invader.update()
             render(invader)
 
             if (invader.rect.collidelist([i.rect for i in level.bunkers])) != -1:
-                return
+                return level.score_val
 
             if invader.pos.x <= 50:
                 invader.pos += Vector2(0, 50)
@@ -185,9 +163,9 @@ def play_level(level: Level):
 
             if level.player.pos.x + 20 >= invader.pos.x >= level.player.pos.x - 20:
                 if random.randint(1, 2000) == 1:
-                    bullet = Bullet(sprite=bullet_image, pos=Vector2(0, 0), vel=Vector2(0, 0.4),
+                    bullet = Bullet(image=bullet_image, pos=Vector2(0, 0), vel=Vector2(0, 0.4),
                                     shooter=invader)
-                    level.bullets.append(bullet)
+                    level.bullets.add(bullet)
 
         render(level.player)
         level.player.update()
@@ -197,15 +175,14 @@ def play_level(level: Level):
                 if bullet.rect.colliderect(level.player.rect):  # Invader -> Player
                     level.player.health -= 1
                     if level.player.health == 0:
-                        game_over(level.score_val)
-                        return
+                        return level.score_val
 
                     level.bullets.remove(bullet)
 
                 elif (index := bullet.rect.collidelist([i.rect for i in level.bunkers])) != -1:  # Invader -> Bunker
-                    bunker = level.bunkers[index]
+                    bunker = list(level.bunkers)[index]
                     if bunker.state == 4:
-                        level.bunkers.pop(index)
+                        level.bunkers.remove(bunker)
                     else:
                         bunker.state += 1
 
@@ -213,28 +190,25 @@ def play_level(level: Level):
 
             elif isinstance(bullet.shooter, Player):
                 if (index := bullet.rect.collidelist([i.rect for i in level.invaders])) != -1:  # Player -> Invader
-                    level.score_val += level.invaders[index].points
-                    level.invaders.pop(index)
+                    invader = list(level.invaders)[index]
+                    level.score_val += invader.points
+                    level.invaders.remove(invader)
                     explosion_sound.play()
                     level.bullets.remove(bullet)
 
                 elif level.mystery_ship and bullet.rect.colliderect(level.mystery_ship.rect):  # Player -> Mystery Ship
-                    level.score_val += level.mystery_ship.points
-                    level.end_mystery_ship()
-                    pass
+                    if level.mystery_ship.started:
+                        level.score_val += level.mystery_ship.points
+                        level.mystery_ship.end()
 
-        score = font.render('Points: ' + str(level.score_val),
+        score = font.render(f'Points: {level.score_val}',
                             True, (255, 255, 255))
         screen.blit(score, (5, 5))
 
-        health = font.render('Health: ' + str(level.player.health),
+        health = font.render(f'Health: {level.player.health}',
                              True, (255, 255, 255))
         screen.blit(health, (config.SCREEN_WIDTH - 150, 5))
         pygame.display.update()
-
-
-def game_over(score_val):
-    pass
 
 
 if __name__ == '__main__':
