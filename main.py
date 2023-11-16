@@ -1,17 +1,13 @@
-import random
 import sys
-
 import pygame
-from pygame import Vector2
-
 import config
+from Game import Game
+from Level import Level
 from controls import Button
-from game_objects import Invader, Player, Bullet, Level
+from game_objects import Invader, Player
 from levels import levels
-from repositories import sounds, images
 
 pygame.init()
-
 screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
 pygame.display.set_caption(config.GAME_TITLE)
 local_levels = levels()
@@ -22,8 +18,6 @@ def quit_game():
     sys.exit()
 
 
-def render(game_object):
-    screen.blit(game_object.image, game_object.rect)
 
 
 def main_menu():
@@ -98,117 +92,9 @@ def levels_menu():
 
 
 def play_level(level: Level):
-    TRIGGER_MYSTERY_SHIP, t = pygame.USEREVENT + 1, 10000
-    bullet_image = images.get('bullet')
-    pygame.time.set_timer(TRIGGER_MYSTERY_SHIP, t)
-    font = pygame.font.Font('freesansbold.ttf', 20)
-
-    bullet_sound = sounds.get('bullet')
-    explosion_sound = sounds.get('explosion')
-    background_sound = sounds.get('background')
-
-    while True:
-
-        # RGB
-        screen.fill('black')
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    level.player.vel.x = -0.4
-                if event.key == pygame.K_RIGHT:
-                    level.player.vel.x = 0.4
-
-                if event.key == pygame.K_SPACE:
-                    if not level.player.reloading:
-                        bullet = Bullet(pos=Vector2(0, 0), vel=Vector2(0, -0.4), shooter=level.player)
-                        level.bullets.add(bullet)
-                        bullet_sound.play()
-                        level.player.reload()
-
-            if event.type == TRIGGER_MYSTERY_SHIP and not level.mystery_ship.started:
-                level.mystery_ship.start()
-
-            if event.type == pygame.KEYUP:
-                level.player.vel.x = 0
-
-        if level.mystery_ship.started:
-            level.mystery_ship.update()
-            render(level.mystery_ship)
-
-        level.bullets.update()
-        level.bullets.draw(screen)
-
-        level.bunkers.update()
-        level.bunkers.draw(screen)
-
-        if not list(level.invaders):
-            return level.score_val
-
-        for invader in level.invaders:
-            invader.update()
-            render(invader)
-
-            if (invader.rect.collidelist([i.rect for i in level.bunkers])) != -1:
-                return level.score_val
-
-            if invader.pos.x <= 50:
-                invader.pos += Vector2(0, 50)
-                invader.vel *= -1
-            elif invader.pos.x >= config.SCREEN_WIDTH - 50:
-                invader.pos += Vector2(0, 50)
-                invader.vel *= -1
-
-            if level.player.pos.x + 20 >= invader.pos.x >= level.player.pos.x - 20:
-                if random.randint(1, 2000) == 1:
-                    bullet = Bullet(image=bullet_image, pos=Vector2(0, 0), vel=Vector2(0, 0.4),
-                                    shooter=invader)
-                    level.bullets.add(bullet)
-
-        render(level.player)
-        level.player.update()
-
-        for bullet in level.bullets:
-            if isinstance(bullet.shooter, Invader):
-                if bullet.rect.colliderect(level.player.rect):  # Invader -> Player
-                    level.player.health -= 1
-                    if level.player.health == 0:
-                        return level.score_val
-
-                    level.bullets.remove(bullet)
-
-                elif (index := bullet.rect.collidelist([i.rect for i in level.bunkers])) != -1:  # Invader -> Bunker
-                    bunker = list(level.bunkers)[index]
-                    if bunker.state == 4:
-                        level.bunkers.remove(bunker)
-                    else:
-                        bunker.state += 1
-
-                    level.bullets.remove(bullet)
-
-            elif isinstance(bullet.shooter, Player):
-                if (index := bullet.rect.collidelist([i.rect for i in level.invaders])) != -1:  # Player -> Invader
-                    invader = list(level.invaders)[index]
-                    level.score_val += invader.points
-                    level.invaders.remove(invader)
-                    explosion_sound.play()
-                    level.bullets.remove(bullet)
-
-                elif level.mystery_ship and bullet.rect.colliderect(level.mystery_ship.rect):  # Player -> Mystery Ship
-                    if level.mystery_ship.started:
-                        level.score_val += level.mystery_ship.points
-                        level.mystery_ship.end()
-
-        score = font.render(f'Points: {level.score_val}',
-                            True, (255, 255, 255))
-        screen.blit(score, (5, 5))
-
-        health = font.render(f'Health: {level.player.health}',
-                             True, (255, 255, 255))
-        screen.blit(health, (config.SCREEN_WIDTH - 150, 5))
-        pygame.display.update()
+    game = Game(level, screen)
+    game.start()
+    return game.level.score_val
 
 
 if __name__ == '__main__':
