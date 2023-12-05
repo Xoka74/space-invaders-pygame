@@ -2,13 +2,12 @@ import pygame
 
 
 class Button(pygame.sprite.Sprite):
-    """ Create a button clickable with changing hover color"""
-
     def __init__(self, text="Click",
                  pos=(0, 0), fontsize=16,
                  colors="white on blue",
                  # hover_colors="red on green",
-                 command=lambda: print("No command activated for this button")):
+                 command=lambda:
+                 print("No command activated for this button")):
         super().__init__()
         self.text = text
         self.command = command
@@ -35,4 +34,5 @@ class Button(pygame.sprite.Sprite):
         self.original_image = self.image.copy()
 
     def clicked(self):
-        return self.rect.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed()[0]
+        return self.rect.collidepoint(pygame.mouse.get_pos()) and \
+            pygame.mouse.get_pressed()[0]

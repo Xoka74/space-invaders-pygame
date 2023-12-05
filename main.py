@@ -1,10 +1,9 @@
 import sys
 import pygame
 import config
-from Game import Game
-from Level import Level
+from game import Game
+from level import Level
 from controls import Button
-from game_objects import Invader, Player
 from levels import levels
 
 pygame.init()
@@ -16,8 +15,6 @@ local_levels = levels()
 def quit_game():
     pygame.quit()
     sys.exit()
-
-
 
 
 def main_menu():
@@ -56,7 +53,8 @@ def levels_menu():
 
     for i in range(len(local_levels)):
         level = local_levels[i]
-        button = Button(f'Level {level.name} | High score: {level.high_score}',
+        button = Button(f'Level {level.name} | '
+                        f'High score: {level.high_score}',
                         pos=(config.SCREEN_WIDTH / 2, 50 + i * 100),
                         fontsize=36,
                         colors='white on black', )
@@ -84,7 +82,8 @@ def levels_menu():
                     continue
 
                 base_level.high_score = score_val
-                button.set_text(f'Level {base_level.name} | High score: {base_level.high_score}')
+                button.set_text(f'Level {base_level.name} | '
+                                f'High score: {base_level.high_score}')
 
         buttons.draw(screen)
         buttons.update()

@@ -2,7 +2,8 @@ import pygame
 from pygame import Vector2
 
 import config
-from game_objects import Invader, Bunker, Level, Player, MysteryShip
+from level import Level
+from game_objects import Bunker, Invader, MysteryShip, Player
 from repositories import images
 
 
@@ -13,7 +14,8 @@ def get_bunkers(amount):
     offset = (config.SCREEN_WIDTH - amount * bunker_width) / (amount + 1)
 
     for i in range(amount):
-        pos = Vector2(x=(offset + bunker_width / 2) * (i + 1), y=config.SCREEN_HEIGHT - 125)
+        pos = Vector2(x=(offset + bunker_width / 2) * (i + 1),
+                      y=config.SCREEN_HEIGHT - 125)
         bunker = Bunker(pos=pos,
                         vel=Vector2(0, 0),
                         state=0)
@@ -24,13 +26,15 @@ def get_bunkers(amount):
 def get_invaders(amount, row_amount):
     result = pygame.sprite.Group()
     for i in range(row_amount):
-        image = pygame.transform.scale_by(pygame.image.load(f'data/images/enemy_{i + 1}/0.png'), 3)
+        image = pygame.transform.scale_by(
+            pygame.image.load(f'data/images/enemy_{i + 1}/0.png'), 3)
 
         invader_width = image.get_width()
         offset = (config.SCREEN_WIDTH - amount * invader_width) / (amount + 1)
 
         for j in range(amount):
-            pos = Vector2(x=(offset + invader_width / 2) * (j + 1), y=40 + 50 * (i + 1))
+            pos = Vector2(x=(offset + invader_width / 2) * (j + 1),
+                          y=40 + 50 * (i + 1))
             vel = Vector2(0.1, 0)
             result.add(Invader(image, pos, vel, points=20))
 
