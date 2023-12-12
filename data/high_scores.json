@@ -1,0 +1,14 @@
+{
+    "Easy": {
+        "Some User": 60,
+        "User123": 60
+    },
+    "Medium": {
+        "Top Player": 300,
+        "User123": 40
+    },
+    "Hard": {
+        "Pygame Enjoyer": 5000,
+        "User123": 660
+    }
+}

@@ -10,12 +10,11 @@ class Level:
                  invaders: Group,
                  bunkers: Group,
                  player: Player,
-                 mystery_ship: MysteryShip):
+                 ship: MysteryShip):
         self.name = name
         self.invaders = invaders
         self.bunkers = bunkers
         self.player = player
-        self.ship = mystery_ship
+        self.ship = ship
         self.bullets = pygame.sprite.Group()
-        self.score_val: int = 0
         self.high_score: int = 0

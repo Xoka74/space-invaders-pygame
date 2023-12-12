@@ -1,100 +1,75 @@
-import sys
 import pygame
-import config
+import pygame_menu
+from levels import load_levels
 from game import Game
-from level import Level
-from controls import Button
-from levels import levels
+from persistence import HighScoreRepository, HighScore
+from repositories import ImageRepository
+from settings import Settings
 
 pygame.init()
-screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
-pygame.display.set_caption(config.GAME_TITLE)
-local_levels = levels()
+screen = pygame.display.set_mode((Settings.SCREEN_WIDTH,
+                                  Settings.SCREEN_HEIGHT))
+pygame.display.set_caption('Space invaders')
+repo = HighScoreRepository('data/high_scores.json')
+images = ImageRepository('data/images')
+name = 'User123'
 
 
-def quit_game():
-    pygame.quit()
-    sys.exit()
+def name_change(new):
+    global name
+    name = new
 
 
-def main_menu():
-    play_button = Button('PLAY', pos=(config.SCREEN_WIDTH / 2, 100),
-                         fontsize=36,
-                         colors='white on black', )
-    quit_button = Button('QUIT', pos=(config.SCREEN_WIDTH / 2, 200),
-                         fontsize=36,
-                         colors='white on black', )
-
-    buttons = pygame.sprite.Group()
-    buttons.add(play_button, quit_button)
-    while True:
-        screen.fill('black')
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-        if play_button.clicked():
-            levels_menu()
-        elif quit_button.clicked():
-            quit_game()
-        buttons.draw(screen)
-        buttons.update()
-
-        pygame.display.update()
+def level_menu():
+    level_menu = pygame_menu.Menu('Levels', Settings.SCREEN_WIDTH,
+                                  Settings.SCREEN_HEIGHT)
+    for i in range(len(load_levels(images))):
+        level = load_levels(images)[i]
+        level_menu.add.button(level.name, start_level, i)
+    return level_menu
 
 
-def levels_menu():
-    buttons = pygame.sprite.Group()
-    back_button = Button('BACK', pos=(40, 40),
-                         fontsize=36,
-                         colors='white on black', )
+def update_leaderboards(menu):
+    menu.clear()
+    for level_info in repo.get_all():
+        menu.add.button(level_info.name,
+                        align=pygame_menu.locals.ALIGN_LEFT)
 
-    buttons.add(back_button)
-
-    for i in range(len(local_levels)):
-        level = local_levels[i]
-        button = Button(f'Level {level.name} | '
-                        f'High score: {level.high_score}',
-                        pos=(config.SCREEN_WIDTH / 2, 50 + i * 100),
-                        fontsize=36,
-                        colors='white on black', )
-
-        buttons.add(button)
-
-    while True:
-        screen.fill('black')
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                quit_game()
-
-        if back_button.clicked():
-            return
-
-        buttons_list = list(buttons)
-
-        for i in range(1, len(buttons_list)):
-            button = buttons_list[i]
-            if button.clicked():
-                level = levels()[i - 1]
-                base_level = local_levels[i - 1]
-                score_val = play_level(level)
-                if base_level.high_score >= score_val:
-                    continue
-
-                base_level.high_score = score_val
-                button.set_text(f'Level {base_level.name} | '
-                                f'High score: {base_level.high_score}')
-
-        buttons.draw(screen)
-        buttons.update()
-        pygame.display.update()
+        for high_score in sorted(level_info.high_scores,
+                                 key=lambda x: x.value,
+                                 reverse=True):
+            menu.add.button(
+                f'{high_score.name} - {high_score.value} points',
+                align=pygame_menu.locals.ALIGN_LEFT) \
+                .set_margin(40, 0)
 
 
-def play_level(level: Level):
+leaderboards = pygame_menu.Menu('Leaderboards', Settings.SCREEN_WIDTH,
+                                Settings.SCREEN_HEIGHT)
+update_leaderboards(leaderboards)
+
+
+def start_level(i):
+    level = load_levels(images)[i]
     game = Game(level, screen)
     game.start()
-    return game.level.score_val
+
+    high_score = HighScore(name, game.level.player.points)
+    repo.add_or_update_high_score(level.name, high_score)
+    update_leaderboards(leaderboards)
 
 
-if __name__ == '__main__':
-    main_menu()
+main_menu = pygame_menu.Menu('Main menu', Settings.SCREEN_WIDTH,
+                             Settings.SCREEN_HEIGHT)
+main_menu.add.text_input('Name: ', default=name,
+                         onchange=name_change, maxchar=15)
+main_menu.add.button('Play', level_menu())
+main_menu.add.button('Leaderboards', leaderboards)
+main_menu.add.button('Quit', pygame_menu.events.EXIT)
+
+while True:
+    if main_menu.is_enabled():
+        main_menu.update(pygame.event.get())
+        main_menu.draw(screen)
+
+    pygame.display.update()
